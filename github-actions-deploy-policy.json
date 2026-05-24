@@ -1,0 +1,43 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:Describe*",
+        "iam:Get*",
+        "iam:List*",
+        "kms:Describe*",
+        "kms:List*",
+        "logs:Describe*",
+        "logs:Get*",
+        "logs:List*",
+        "s3:List*",
+        "sts:GetCallerIdentity",
+        "dynamodb:Describe*",
+        "dynamodb:List*",
+        "cloudwatch:Describe*",
+        "cloudwatch:Get*",
+        "cloudwatch:List*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudformation:*",
+        "dynamodb:*",
+        "iam:*",
+        "kms:*",
+        "lambda:*",
+        "logs:*",
+        "sns:*",
+        "s3:*",
+        "cloudwatch:*",
+        "events:*",
+        "tag:*"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
