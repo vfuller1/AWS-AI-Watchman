@@ -1,4 +1,3 @@
-
 name: AWS OIDC Minimal Test
 
 on:
@@ -13,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: arn:aws:iam::161486985462:role/aws-ai-watchman-dev-github-actions-deploy
           aws-region: us-east-1
