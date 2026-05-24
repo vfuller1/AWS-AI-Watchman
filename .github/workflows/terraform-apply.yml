@@ -1,13 +1,13 @@
 name: Terraform Apply
 
 on:
-  workflow_dispatch:
-    inputs:
-      environment:
-        description: Deployment environment name
-        required: true
-        default: dev
-        type: string
+  workflow_run:
+    workflows:
+      - Terraform Plan
+    types:
+      - completed
+    branches:
+      - main
 
 permissions:
   contents: read
@@ -16,14 +16,16 @@ permissions:
 env:
   AWS_ACCOUNT_ID: "161486985462"
   AWS_ACCOUNT_NAME: "cybersecurity1st"
+  AWS_ROLE_ARN: "arn:aws:iam::161486985462:role/aws-ai-watchman-dev-github-actions-deploy"
   AWS_REGION: "us-east-1"
   TF_IN_AUTOMATION: "true"
 
 jobs:
   apply:
     name: Terraform Apply
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: aws-deploy
     defaults:
       run:
         working-directory: infra/terraform
@@ -31,6 +33,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -40,7 +44,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Confirm target account
@@ -53,4 +57,4 @@ jobs:
         run: terraform validate
 
       - name: Terraform apply
-        run: terraform apply -input=false -auto-approve -var="aws_region=${AWS_REGION}" -var="environment=${{ inputs.environment }}"
+        run: terraform apply -input=false -auto-approve -var="aws_region=${AWS_REGION}" -var="environment=dev"

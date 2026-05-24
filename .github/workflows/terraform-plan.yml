@@ -1,12 +1,18 @@
 name: Terraform Plan
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "infra/terraform/**"
+      - ".github/workflows/terraform-plan.yml"
+      - ".github/workflows/terraform-apply.yml"
   pull_request:
     paths:
       - "infra/terraform/**"
       - ".github/workflows/terraform-plan.yml"
       - ".github/workflows/terraform-apply.yml"
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +21,8 @@ permissions:
 env:
   AWS_ACCOUNT_ID: "161486985462"
   AWS_ACCOUNT_NAME: "cybersecurity1st"
+  AWS_ROLE_NAME: "aws-ai-watchman-dev-github-actions-deploy"
+  AWS_ROLE_ARN: "arn:aws:iam::161486985462:role/aws-ai-watchman-dev-github-actions-deploy"
   AWS_REGION: "us-east-1"
   TF_IN_AUTOMATION: "true"
 
@@ -38,7 +46,7 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          role-to-assume: ${{ env.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Confirm target account
