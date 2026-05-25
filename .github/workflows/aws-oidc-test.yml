@@ -1,21 +1,23 @@
-name: AWS OIDC Minimal Test
+name: AWS OIDC Smoke Test
 
+# Manual trigger only — use this to verify OIDC trust after a new deploy
 on:
   workflow_dispatch:
 
-
+permissions:
+  contents: read
+  id-token: write
 
 jobs:
   oidc-test:
+    name: Verify OIDC Token Exchange
     runs-on: ubuntu-latest
     steps:
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4.0.2
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: "arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/aws-ai-watchman-dev-github-actions-deploy"
           aws-region: us-east-1
 
-      - name: Check identity
+      - name: Verify assumed identity
         run: aws sts get-caller-identity

@@ -23,4 +23,13 @@ output "orchestrator_role_arn" {
   value = aws_iam_role.orchestrator.arn
 }
 
+output "github_actions_deploy_role_arn" {
+  description = "IAM role ARN that GitHub Actions assumes via OIDC to run Terraform."
+  value       = aws_iam_role.github_actions_deploy.arn
+}
+
+output "github_oidc_provider_arn" {
+  description = "ARN of the GitHub Actions OIDC identity provider."
+  value       = aws_iam_openid_connect_provider.github_actions.arn
+}
 
