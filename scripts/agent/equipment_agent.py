@@ -34,7 +34,7 @@ from botocore.exceptions import ClientError
 # ---------------------------------------------------------------------------
 # Model selection — Claude 3 Haiku keeps demo costs low (~$0.25/1M tokens)
 # ---------------------------------------------------------------------------
-MODEL_ID = "anthropic.claude-3-haiku-20240307-v1:0"
+MODEL_ID = "us.anthropic.claude-haiku-4-5-20251001-v1:0"  # cross-region inference profile
 
 SYSTEM_PROMPT = """You are an AI assistant for an industrial equipment rental company.
 Your role is to help field technicians diagnose equipment issues, interpret fault codes,

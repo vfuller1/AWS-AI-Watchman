@@ -167,7 +167,7 @@ resource "aws_cloudwatch_dashboard" "watchman" {
             "## AWS AI Watchman — Operations Dashboard\n",
             "**Environment:** `${var.environment}` | ",
             "**Guardrail:** `${aws_bedrock_guardrail.watchman.guardrail_id}` (v${aws_bedrock_guardrail_version.watchman_v1.version}) | ",
-            "**Model:** `anthropic.claude-3-haiku-20240307-v1:0`\n\n",
+            "**Model:** `us.anthropic.claude-haiku-4-5-20251001-v1:0`\n\n",
             "Metrics refresh every 5 minutes. ",
             "Guardrail data populates only when the agent runtime emits logs to ",
             "`${aws_cloudwatch_log_group.agent.name}`.",
