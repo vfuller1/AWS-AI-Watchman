@@ -34,14 +34,4 @@ variable "tags" {
   default = {}
 }
 
-variable "github_repository" {
-  description = "GitHub repository in OWNER/REPO format allowed to assume the OIDC role."
-  type = string
-}
-
-variable "github_branch" {
-  description = "Git branch allowed to assume the OIDC role."
-  type = string
-  default = "main"
-}
 
