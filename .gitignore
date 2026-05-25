@@ -8,3 +8,14 @@ override.tf
 override.tf.json
 *_override.tf
 *_override.tf.json
+
+# Lambda build artifacts
+infra/terraform/lambda/*.zip
+
+# Generated data files — never commit PDFs or CSVs to source control
+scripts/ingest/data/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
