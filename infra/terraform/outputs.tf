@@ -23,8 +23,4 @@ output "orchestrator_role_arn" {
   value = aws_iam_role.orchestrator.arn
 }
 
-output "github_actions_deploy_role_arn" {
-  description = "IAM role assumed by GitHub Actions for AWS deployments."
-  value = aws_iam_role.github_actions_deploy.arn
-}
 
