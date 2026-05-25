@@ -113,6 +113,63 @@ data "aws_iam_policy_document" "github_actions_deploy_permissions" {
     ]
     resources = ["*"]
   }
+
+  # Glue — resource tags are not supported on all create actions
+  statement {
+    sid    = "GlueManagement"
+    effect = "Allow"
+    actions = [
+      "glue:CreateDatabase",
+      "glue:DeleteDatabase",
+      "glue:GetDatabase",
+      "glue:GetDatabases",
+      "glue:UpdateDatabase",
+      "glue:TagResource",
+      "glue:UntagResource",
+      "glue:GetTags",
+      "glue:CreateCrawler",
+      "glue:DeleteCrawler",
+      "glue:GetCrawler",
+      "glue:GetCrawlers",
+      "glue:UpdateCrawler",
+      "glue:StartCrawler",
+      "glue:StopCrawler",
+    ]
+    resources = ["*"]
+  }
+
+  # Lambda — needed to create/update the Bronze router function
+  statement {
+    sid    = "LambdaManagement"
+    effect = "Allow"
+    actions = [
+      "lambda:CreateFunction",
+      "lambda:DeleteFunction",
+      "lambda:GetFunction",
+      "lambda:GetFunctionConfiguration",
+      "lambda:UpdateFunctionCode",
+      "lambda:UpdateFunctionConfiguration",
+      "lambda:AddPermission",
+      "lambda:RemovePermission",
+      "lambda:GetPolicy",
+      "lambda:ListFunctions",
+      "lambda:TagResource",
+      "lambda:UntagResource",
+      "lambda:ListTags",
+    ]
+    resources = ["*"]
+  }
+
+  # S3 bucket notifications (used to wire Bronze bucket → Lambda)
+  statement {
+    sid    = "S3NotificationManagement"
+    effect = "Allow"
+    actions = [
+      "s3:GetBucketNotification",
+      "s3:PutBucketNotification",
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions_deploy" {

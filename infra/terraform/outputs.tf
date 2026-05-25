@@ -33,3 +33,33 @@ output "github_oidc_provider_arn" {
   value       = aws_iam_openid_connect_provider.github_actions.arn
 }
 
+output "bronze_bucket_name" {
+  description = "S3 bucket for raw Bronze-layer ingestion."
+  value       = aws_s3_bucket.bronze.bucket
+}
+
+output "silver_bucket_name" {
+  description = "S3 bucket for cleaned Silver-layer data."
+  value       = aws_s3_bucket.silver.bucket
+}
+
+output "gold_bucket_name" {
+  description = "S3 bucket for curated Gold-layer vector-ready data (Bedrock Knowledge Base source)."
+  value       = aws_s3_bucket.gold.bucket
+}
+
+output "glue_catalog_database" {
+  description = "Glue Data Catalog database name for the lakehouse."
+  value       = aws_glue_catalog_database.watchman.name
+}
+
+output "glue_bronze_crawler_name" {
+  description = "Glue Crawler for Bronze layer — run on-demand via CLI or console."
+  value       = aws_glue_crawler.bronze.name
+}
+
+output "bronze_router_lambda_name" {
+  description = "Lambda function that routes new Bronze objects into typed sub-folders."
+  value       = aws_lambda_function.bronze_router.function_name
+}
+
