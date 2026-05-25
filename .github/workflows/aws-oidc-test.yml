@@ -3,18 +3,18 @@ name: AWS OIDC Minimal Test
 on:
   workflow_dispatch:
 
-permissions:
-  id-token: write
-  contents: read
+
 
 jobs:
   oidc-test:
     runs-on: ubuntu-latest
     steps:
+
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
-          role-to-assume: arn:aws:iam::161486985462:role/aws-ai-watchman-dev-github-actions-deploy
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
       - name: Check identity
