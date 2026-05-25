@@ -56,4 +56,4 @@ jobs:
         run: terraform validate
 
       - name: Terraform apply
-        run: terraform apply -input=false -auto-approve -var="aws_region=${AWS_REGION}" -var="environment=dev" -var="github_repository=${GITHUB_REPOSITORY}"
+        run: terraform apply -input=false -auto-approve -var="aws_region=${AWS_REGION}" -var="environment=dev"
