@@ -35,8 +35,9 @@ variable "tags" {
 }
 
 variable "github_repository" {
-  description = "GitHub repository in OWNER/REPO format allowed to assume the OIDC deploy role (e.g. VFull/AWS-AI-Watchman)."
+  description = "GitHub repository in OWNER/REPO format allowed to assume the OIDC deploy role (e.g. vfuller1/AWS-AI-Watchman)."
   type        = string
+  default     = "vfuller1/AWS-AI-Watchman"
 }
 
 variable "github_branch" {
