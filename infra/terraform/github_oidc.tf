@@ -171,6 +171,66 @@ data "aws_iam_policy_document" "github_actions_deploy_permissions" {
     ]
     resources = ["*"]
   }
+
+  # Bedrock Guardrails and Knowledge Base management
+  statement {
+    sid    = "BedrockManagement"
+    effect = "Allow"
+    actions = [
+      "bedrock:CreateGuardrail",
+      "bedrock:UpdateGuardrail",
+      "bedrock:DeleteGuardrail",
+      "bedrock:GetGuardrail",
+      "bedrock:ListGuardrails",
+      "bedrock:CreateGuardrailVersion",
+      "bedrock:UpdateGuardrailVersion",
+      "bedrock:DeleteGuardrailVersion",
+      "bedrock:GetGuardrailVersion",
+      "bedrock:ListGuardrailVersions",
+      "bedrock:CreateKnowledgeBase",
+      "bedrock:UpdateKnowledgeBase",
+      "bedrock:DeleteKnowledgeBase",
+      "bedrock:GetKnowledgeBase",
+      "bedrock:ListKnowledgeBases",
+      "bedrock:CreateDataSource",
+      "bedrock:UpdateDataSource",
+      "bedrock:DeleteDataSource",
+      "bedrock:GetDataSource",
+      "bedrock:ListDataSources",
+      "bedrock:TagResource",
+      "bedrock:UntagResource",
+      "bedrock:ListTagsForResource",
+    ]
+    resources = ["*"]
+  }
+
+  # OpenSearch Serverless — required when enable_bedrock_kb=true
+  statement {
+    sid    = "OpenSearchServerlessManagement"
+    effect = "Allow"
+    actions = [
+      "aoss:CreateCollection",
+      "aoss:UpdateCollection",
+      "aoss:DeleteCollection",
+      "aoss:BatchGetCollection",
+      "aoss:ListCollections",
+      "aoss:CreateSecurityPolicy",
+      "aoss:UpdateSecurityPolicy",
+      "aoss:DeleteSecurityPolicy",
+      "aoss:GetSecurityPolicy",
+      "aoss:ListSecurityPolicies",
+      "aoss:CreateAccessPolicy",
+      "aoss:UpdateAccessPolicy",
+      "aoss:DeleteAccessPolicy",
+      "aoss:GetAccessPolicy",
+      "aoss:ListAccessPolicies",
+      "aoss:TagResource",
+      "aoss:UntagResource",
+      "aoss:ListTagsForResource",
+      "aoss:APIAccessAll",
+    ]
+    resources = ["*"]
+  }
 }
 
 resource "aws_iam_role_policy" "github_actions_deploy" {

@@ -63,3 +63,28 @@ output "bronze_router_lambda_name" {
   value       = aws_lambda_function.bronze_router.function_name
 }
 
+output "guardrail_id" {
+  description = "Bedrock Guardrail ID — pass as guardrailIdentifier when invoking models."
+  value       = aws_bedrock_guardrail.watchman.guardrail_id
+}
+
+output "guardrail_arn" {
+  description = "Bedrock Guardrail ARN."
+  value       = aws_bedrock_guardrail.watchman.guardrail_arn
+}
+
+output "guardrail_version" {
+  description = "Published Guardrail version — use this in production API calls."
+  value       = aws_bedrock_guardrail_version.watchman_v1.version
+}
+
+output "knowledge_base_id" {
+  description = "Bedrock Knowledge Base ID (null when enable_bedrock_kb=false)."
+  value       = var.enable_bedrock_kb ? aws_bedrockagent_knowledge_base.watchman[0].id : null
+}
+
+output "knowledge_base_data_source_id" {
+  description = "Bedrock Knowledge Base Data Source ID — use to trigger ingestion jobs."
+  value       = var.enable_bedrock_kb ? aws_bedrockagent_data_source.gold[0].data_source_id : null
+}
+

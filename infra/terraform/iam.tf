@@ -42,3 +42,23 @@ resource "aws_iam_role_policy" "lambda_router" {
   policy = data.aws_iam_policy_document.lambda_router_permissions.json
 }
 
+# =============================================================================
+# Bedrock Knowledge Base Role (only created when enable_bedrock_kb=true)
+# =============================================================================
+
+resource "aws_iam_role" "bedrock_kb" {
+  count = var.enable_bedrock_kb ? 1 : 0
+
+  name               = "${var.project_name}-${var.environment}-bedrock-kb"
+  assume_role_policy = data.aws_iam_policy_document.bedrock_kb_assume_role.json
+  tags               = local.common_tags
+}
+
+resource "aws_iam_role_policy" "bedrock_kb" {
+  count = var.enable_bedrock_kb ? 1 : 0
+
+  name   = "${var.project_name}-${var.environment}-bedrock-kb"
+  role   = aws_iam_role.bedrock_kb[0].id
+  policy = data.aws_iam_policy_document.bedrock_kb_permissions.json
+}
+

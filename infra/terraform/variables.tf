@@ -46,3 +46,14 @@ variable "github_branch" {
   default     = "main"
 }
 
+variable "enable_bedrock_kb" {
+  description = <<-EOT
+    Deploy the Bedrock Knowledge Base and its OpenSearch Serverless vector store.
+    WARNING: OpenSearch Serverless costs ~$700/month minimum (2 indexing + 2 search OCUs).
+    Leave false for POC/dev. Enable only when actively demoing RAG:
+      terraform apply -var="enable_bedrock_kb=true"
+  EOT
+  type    = bool
+  default = false
+}
+

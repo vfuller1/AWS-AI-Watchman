@@ -390,3 +390,79 @@ data "aws_iam_policy_document" "lambda_router_permissions" {
     ]
   }
 }
+
+# =============================================================================
+# Bedrock Knowledge Base IAM
+# =============================================================================
+
+data "aws_iam_policy_document" "bedrock_kb_assume_role" {
+  statement {
+    effect = "Allow"
+    principals {
+      type        = "Service"
+      identifiers = ["bedrock.amazonaws.com"]
+    }
+    actions = ["sts:AssumeRole"]
+
+    # Confused-deputy protection — only our account can trigger the assumption
+    condition {
+      test     = "StringEquals"
+      variable = "aws:SourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+}
+
+data "aws_iam_policy_document" "bedrock_kb_permissions" {
+  # Read curated documents from the Gold bucket
+  statement {
+    sid    = "GoldS3Read"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.gold.arn,
+      "${aws_s3_bucket.gold.arn}/*",
+    ]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:ResourceAccount"
+      values   = [data.aws_caller_identity.current.account_id]
+    }
+  }
+
+  # Decrypt KMS-encrypted Gold objects
+  statement {
+    sid    = "KmsDecryptGold"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:DescribeKey",
+      "kms:GenerateDataKey",
+    ]
+    resources = [aws_kms_key.watchman.arn]
+  }
+
+  # Call the Titan embedding model to vectorise document chunks
+  statement {
+    sid    = "TitanEmbedding"
+    effect = "Allow"
+    actions = ["bedrock:InvokeModel"]
+    resources = [
+      "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.titan-embed-text-v2:0",
+    ]
+  }
+
+  # Write vectors to the OpenSearch Serverless collection (only when KB is enabled)
+  dynamic "statement" {
+    for_each = var.enable_bedrock_kb ? [1] : []
+    content {
+      sid      = "OpenSearchVectorWrite"
+      effect   = "Allow"
+      actions  = ["aoss:APIAccessAll"]
+      resources = [aws_opensearchserverless_collection.kb[0].arn]
+    }
+  }
+}
