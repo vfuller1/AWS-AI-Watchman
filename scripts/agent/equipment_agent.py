@@ -222,6 +222,79 @@ class EquipmentAgent:
 
         return "guardrail"
 
+    def test_guardrail(self, message: str, source: str = "INPUT") -> dict:
+        """
+        Evaluate a message against the guardrail WITHOUT invoking a model.
+        Uses the apply_guardrail API — no model access or approval needed.
+
+        Returns the same shape as invoke() for consistent downstream handling.
+        source: "INPUT" (user message) or "OUTPUT" (simulated model response).
+        """
+        if not self.guardrail_id:
+            return {
+                "message": message,
+                "blocked": False,
+                "block_reason": None,
+                "pii_detected": [],
+                "text": message,
+                "latency_ms": 0,
+            }
+
+        t0 = time.monotonic()
+        response = self.bedrock.apply_guardrail(
+            guardrailIdentifier=self.guardrail_id,
+            guardrailVersion=self.guardrail_version,
+            source=source,
+            content=[{"text": {"text": message}}],
+        )
+        latency_ms = int((time.monotonic() - t0) * 1000)
+
+        action = response.get("action", "NONE")
+        blocked = action == "GUARDRAIL_INTERVENED"
+        outputs = response.get("outputs", [])
+        out_text = outputs[0].get("text", message) if outputs else message
+
+        # Parse assessments for block reason and detected PII
+        block_reason = None
+        pii_detected = []
+        anonymized = []
+        for a in response.get("assessments", []):
+            # Topic blocks
+            if not block_reason:
+                for t in a.get("topicPolicy", {}).get("topics", []):
+                    if t.get("action") == "BLOCKED":
+                        block_reason = f"topic:{t.get('name', '?')}"
+                        break
+            # Content filter blocks
+            if not block_reason:
+                for f in a.get("contentPolicy", {}).get("filters", []):
+                    if f.get("action") == "BLOCKED":
+                        block_reason = f"content:{f.get('type', '?').lower()}"
+                        break
+            # PII — distinguish BLOCK vs ANONYMIZE
+            si = a.get("sensitiveInformationPolicy", {})
+            for p in si.get("piiEntities", []) + si.get("regexes", []):
+                label = p.get("type", p.get("name", "?"))
+                act = p.get("action", "?")
+                if act == "BLOCKED":
+                    if not block_reason:
+                        block_reason = f"pii:{label}"
+                    pii_detected.append({"type": label, "action": "BLOCK"})
+                elif act == "ANONYMIZED":
+                    anonymized.append(label)
+                    pii_detected.append({"type": label, "action": "ANONYMIZE"})
+
+        return {
+            "message": message,
+            "blocked": blocked,
+            "block_reason": block_reason,
+            "pii_detected": pii_detected,
+            "pii_anonymized": anonymized,
+            "text": out_text if blocked else message,
+            "latency_ms": latency_ms,
+            "guardrail_action": action,
+        }
+
     def _emit_log(self, result: dict, error: Optional[str] = None) -> None:
         """
         Emit a structured JSON log line that CloudWatch Logs Metric Filters
@@ -380,6 +453,11 @@ Examples:
     parser.add_argument(
         "--interactive", action="store_true", help="Start an interactive REPL session"
     )
+    parser.add_argument(
+        "--test-guardrail",
+        action="store_true",
+        help="Test guardrail policies without invoking a model (apply_guardrail API)",
+    )
 
     args = parser.parse_args()
 
@@ -403,7 +481,38 @@ Examples:
     print_divider("=")
     print()
 
-    if args.demo:
+    if args.test_guardrail:
+        # apply_guardrail mode — tests the guardrail directly, no model invocation needed.
+        # Use this when model access hasn't been enabled in the Bedrock console yet.
+        print(f"Running {len(DEMO_SCENARIOS)} guardrail-only scenarios (apply_guardrail API)...\n")
+        print_divider("=")
+        blocked_count = 0
+        for scenario in DEMO_SCENARIOS:
+            result = agent.test_guardrail(scenario["message"])
+            status = "[BLOCKED]" if result["blocked"] else "[ALLOWED]"
+            icon = "[X]" if result["blocked"] else "[OK]"
+            if result["blocked"]:
+                blocked_count += 1
+            print(f"Scenario : {scenario['name']}")
+            print(f"Expected : {scenario['expect']}")
+            print(f"Outcome  : {icon} {status}", end="")
+            if result["block_reason"]:
+                print(f"  [{result['block_reason']}]", end="")
+            print()
+            if result.get("pii_anonymized"):
+                print(f"PII mask : {result['pii_anonymized']} (replaced with [TYPE] placeholders)")
+            if result.get("pii_detected") and not result["blocked"]:
+                actions = set(p['action'] for p in result['pii_detected'])
+                types = [p['type'] for p in result['pii_detected']]
+                print(f"PII found: {types} -> {list(actions)}")
+            print(f"Latency  : {result['latency_ms']} ms")
+            print_divider()
+            print()
+        print(f"Summary: {blocked_count}/{len(DEMO_SCENARIOS)} scenarios blocked by guardrail.")
+        print("Note: Scenario 2 shows ALLOWED+ANONYMIZE — PII masked inline, request not rejected.")
+        print("      Run --demo for full model invocation with masked output (requires Bedrock model access).")
+
+    elif args.demo:
         print(f"Running {len(DEMO_SCENARIOS)} governance demonstration scenarios...\n")
         for scenario in DEMO_SCENARIOS:
             result = agent.invoke(scenario["message"])
