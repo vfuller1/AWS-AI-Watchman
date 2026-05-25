@@ -1,8 +1,8 @@
 resource "aws_dynamodb_table" "watchman_state" {
-  name = "${var.project_name}-${var.environment}-state"
+  name         = "${var.project_name}-${var.environment}-state"
   billing_mode = "PAY_PER_REQUEST"
-  hash_key = "pk"
-  range_key = "sk"
+  hash_key     = "pk"
+  range_key    = "sk"
 
   attribute {
     name = "pk"
@@ -19,7 +19,7 @@ resource "aws_dynamodb_table" "watchman_state" {
   }
 
   server_side_encryption {
-    enabled = true
+    enabled     = true
     kms_key_arn = aws_kms_key.watchman.arn
   }
 

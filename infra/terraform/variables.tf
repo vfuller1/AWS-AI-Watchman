@@ -1,37 +1,37 @@
 variable "aws_region" {
   description = "AWS Region where Watchman resources are deployed."
-  type = string
-  default = "us-east-1"
+  type        = string
+  default     = "us-east-1"
 }
 
 variable "environment" {
   description = "Deployment environment name."
-  type = string
-  default = "dev"
+  type        = string
+  default     = "dev"
 }
 
 variable "project_name" {
   description = "Project prefix used for naming AWS resources."
-  type = string
-  default = "aws-ai-watchman"
+  type        = string
+  default     = "aws-ai-watchman"
 }
 
 variable "log_retention_days" {
   description = "CloudWatch Logs retention for orchestration logs."
-  type = number
-  default = 90
+  type        = number
+  default     = 90
 }
 
 variable "orchestrator_service_principal" {
   description = "AWS service principal that can assume the orchestration role."
-  type = string
-  default = "lambda.amazonaws.com"
+  type        = string
+  default     = "lambda.amazonaws.com"
 }
 
 variable "tags" {
   description = "Additional tags applied to all resources."
-  type = map(string)
-  default = {}
+  type        = map(string)
+  default     = {}
 }
 
 variable "github_repository" {
@@ -53,7 +53,7 @@ variable "enable_bedrock_kb" {
     Leave false for POC/dev. Enable only when actively demoing RAG:
       terraform apply -var="enable_bedrock_kb=true"
   EOT
-  type    = bool
-  default = false
+  type        = bool
+  default     = false
 }
 

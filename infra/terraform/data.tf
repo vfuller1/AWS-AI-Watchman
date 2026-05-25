@@ -25,9 +25,9 @@ data "aws_iam_policy_document" "bucket_tls_only" {
 
 data "aws_iam_policy_document" "log_archive_bucket_policy" {
   statement {
-    sid     = "AllowS3LogDelivery"
-    effect  = "Allow"
-    actions = ["s3:PutObject"]
+    sid       = "AllowS3LogDelivery"
+    effect    = "Allow"
+    actions   = ["s3:PutObject"]
     resources = ["${aws_s3_bucket.log_archive.arn}/s3-access/*"]
 
     principals {
@@ -177,8 +177,8 @@ data "aws_iam_policy_document" "orchestrator_permissions" {
   }
 
   statement {
-    effect = "Allow"
-    actions = ["sns:Publish"]
+    effect    = "Allow"
+    actions   = ["sns:Publish"]
     resources = [aws_sns_topic.alerts.arn]
   }
 
@@ -447,8 +447,8 @@ data "aws_iam_policy_document" "bedrock_kb_permissions" {
 
   # Call the Titan embedding model to vectorise document chunks
   statement {
-    sid    = "TitanEmbedding"
-    effect = "Allow"
+    sid     = "TitanEmbedding"
+    effect  = "Allow"
     actions = ["bedrock:InvokeModel"]
     resources = [
       "arn:aws:bedrock:${var.aws_region}::foundation-model/amazon.titan-embed-text-v2:0",
@@ -459,9 +459,9 @@ data "aws_iam_policy_document" "bedrock_kb_permissions" {
   dynamic "statement" {
     for_each = var.enable_bedrock_kb ? [1] : []
     content {
-      sid      = "OpenSearchVectorWrite"
-      effect   = "Allow"
-      actions  = ["aoss:APIAccessAll"]
+      sid       = "OpenSearchVectorWrite"
+      effect    = "Allow"
+      actions   = ["aoss:APIAccessAll"]
       resources = [aws_opensearchserverless_collection.kb[0].arn]
     }
   }

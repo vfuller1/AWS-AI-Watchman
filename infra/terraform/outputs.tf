@@ -1,26 +1,26 @@
 output "artifacts_bucket_name" {
   description = "S3 bucket used for Watchman artifacts."
-  value = aws_s3_bucket.artifacts.bucket
+  value       = aws_s3_bucket.artifacts.bucket
 }
 
 output "log_archive_bucket_name" {
   description = "S3 bucket used for access and platform logs."
-  value = aws_s3_bucket.log_archive.bucket
+  value       = aws_s3_bucket.log_archive.bucket
 }
 
 output "state_table_name" {
   description = "DynamoDB table that stores Watchman state."
-  value = aws_dynamodb_table.watchman_state.name
+  value       = aws_dynamodb_table.watchman_state.name
 }
 
 output "alerts_topic_arn" {
   description = "SNS topic for Watchman alerts."
-  value = aws_sns_topic.alerts.arn
+  value       = aws_sns_topic.alerts.arn
 }
 
 output "orchestrator_role_arn" {
   description = "IAM role for the orchestration runtime."
-  value = aws_iam_role.orchestrator.arn
+  value       = aws_iam_role.orchestrator.arn
 }
 
 output "github_actions_deploy_role_arn" {
@@ -86,5 +86,20 @@ output "knowledge_base_id" {
 output "knowledge_base_data_source_id" {
   description = "Bedrock Knowledge Base Data Source ID — use to trigger ingestion jobs."
   value       = var.enable_bedrock_kb ? aws_bedrockagent_data_source.gold[0].data_source_id : null
+}
+
+output "agent_log_group_name" {
+  description = "CloudWatch Log Group for Equipment Agent JSON logs."
+  value       = aws_cloudwatch_log_group.agent.name
+}
+
+output "orchestration_log_group_name" {
+  description = "CloudWatch Log Group for orchestration runtime logs."
+  value       = aws_cloudwatch_log_group.orchestration.name
+}
+
+output "cloudwatch_dashboard_name" {
+  description = "CloudWatch Dashboard name — open in AWS Console for ops view."
+  value       = aws_cloudwatch_dashboard.watchman.dashboard_name
 }
 

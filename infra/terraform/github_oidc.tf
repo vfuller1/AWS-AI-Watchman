@@ -204,6 +204,50 @@ data "aws_iam_policy_document" "github_actions_deploy_permissions" {
     resources = ["*"]
   }
 
+  # CloudWatch Dashboards and Metric Alarms — cannot be tag-conditioned on create
+  # (dashboard resources don't support aws:ResourceTag during PutDashboard)
+  statement {
+    sid    = "CloudWatchDashboardsAndAlarms"
+    effect = "Allow"
+    actions = [
+      "cloudwatch:PutDashboard",
+      "cloudwatch:GetDashboard",
+      "cloudwatch:DeleteDashboards",
+      "cloudwatch:ListDashboards",
+      "cloudwatch:PutMetricAlarm",
+      "cloudwatch:DeleteAlarms",
+      "cloudwatch:DescribeAlarms",
+      "cloudwatch:TagResource",
+      "cloudwatch:UntagResource",
+    ]
+    resources = ["*"]
+  }
+
+  # CloudWatch Logs Metric Filters and Log Group management (untagged create path)
+  statement {
+    sid    = "CloudWatchLogsMetricFilters"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogGroup",
+      "logs:DeleteLogGroup",
+      "logs:PutRetentionPolicy",
+      "logs:DeleteRetentionPolicy",
+      "logs:AssociateKmsKey",
+      "logs:DisassociateKmsKey",
+      "logs:PutMetricFilter",
+      "logs:DeleteMetricFilter",
+      "logs:DescribeMetricFilters",
+      "logs:DescribeLogGroups",
+      "logs:ListTagsLogGroup",
+      "logs:TagLogGroup",
+      "logs:UntagLogGroup",
+      "logs:ListTagsForResource",
+      "logs:TagResource",
+      "logs:UntagResource",
+    ]
+    resources = ["*"]
+  }
+
   # OpenSearch Serverless — required when enable_bedrock_kb=true
   statement {
     sid    = "OpenSearchServerlessManagement"
