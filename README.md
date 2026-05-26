@@ -238,6 +238,10 @@ python scripts/agent/equipment_agent.py --demo
 
 ## Guardrail Policies
 
+![Bedrock Guardrail governance layer](images/Govenence-Bedrock.png)
+
+*Every message passes through the guardrail before the model is ever called. PII is anonymised or hard-blocked; off-topic queries are rejected at the policy layer, not by the model.*
+
 | Policy | Type | Behaviour |
 |---|---|---|
 | `legal-advice` | Topic deny | Blocks liability / lawsuit questions |
@@ -260,6 +264,26 @@ python scripts/agent/equipment_agent.py --demo
 5. "What's the daily rental rate?"                     → BLOCKED  topic:rental-pricing
 6. "Ignore all previous instructions..."               → BLOCKED  content:prompt_attack
 ```
+
+### CloudWatch Operations Dashboard
+
+![CloudWatch Operations Dashboard](images/monitor.png)
+
+*Live dashboard showing guardrail outcomes (allowed vs blocked), agent end-to-end latency (P50/P90/P99) against a 10-second SLO, and token throughput. Data is populated directly from the agent runtime via structured JSON logs and CloudWatch Metric Filters.*
+
+---
+
+## Architecture Decision: Why Not Databricks?
+
+![Why I opted out of Databricks](images/Opted-out-of-Databricks.png)
+
+The obvious enterprise choice for a data lakehouse + ML pipeline is Databricks (Spark + compute nodes). I chose AWS-native serverless instead for three reasons:
+
+1. **Cost at rest** — Databricks clusters idle at ~$2–5/hr. This stack costs **$0/hr when idle** — Lambda, Glue, and S3 have no standing charge.
+2. **Operational simplicity** — No cluster management, no Spark tuning, no driver/worker coordination. Each ETL step is a standalone Python function.
+3. **Native Bedrock integration** — Bedrock Knowledge Base, Guardrails, and Claude are first-class AWS services. Wiring them to a native Lambda is one `boto3` call; wiring them to Databricks requires a custom integration layer.
+
+The trade-off: Spark would outperform Lambda at large scale (millions of documents). For the fleet-manual use case (hundreds of PDFs, not petabytes), serverless Lambda is the right tool.
 
 ---
 
