@@ -321,21 +321,3 @@ push to main
   └── terraform apply  (on merge to main)
 ```
 
----
-
-## Known Gaps
-
-| Gap | Impact | Fix |
-|---|---|---|
-| No DLQ on Lambda functions | Failed PDF processing silently dropped after 2 retries | Add `dead_letter_config { target_arn = aws_sqs_queue.dlq.arn }` |
-| No X-Ray tracing | Cannot trace a request across Router → ETL Bronze→Silver → ETL Silver→Gold | Add `tracing_config { mode = "Active" }` to all Lambdas |
-
----
-
-## Bugs Fixed
-
-| Bug | Severity | Fix |
-|---|---|---|
-| ETL trigger chain silently broken — router never invoked ETL Lambda | Critical | Router now calls `lambda:InvokeFunction` with `InvocationType=Event` after routing PDFs |
-| `sequenceToken` in `put_log_events` (deprecated Jan 2023) | Minor | Removed — concurrent writes work without it |
-| Log group path hardcoded to `dev` environment | Minor | Now reads `ENVIRONMENT` env var with `dev` fallback |
