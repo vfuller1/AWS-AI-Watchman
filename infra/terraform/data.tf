@@ -389,6 +389,17 @@ data "aws_iam_policy_document" "lambda_router_permissions" {
       "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.project_name}-${var.environment}-bronze-router:*",
     ]
   }
+
+  # Allow router to invoke etl_bronze_to_silver directly (async fire-and-forget)
+  # Required because S3 won't allow overlapping notification rules on the same bucket
+  statement {
+    sid     = "InvokeEtlBronzeToSilver"
+    effect  = "Allow"
+    actions = ["lambda:InvokeFunction"]
+    resources = [
+      "arn:aws:lambda:${var.aws_region}:${data.aws_caller_identity.current.account_id}:function:${var.project_name}-${var.environment}-etl-bronze-to-silver",
+    ]
+  }
 }
 
 # =============================================================================

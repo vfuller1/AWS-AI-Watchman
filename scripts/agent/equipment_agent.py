@@ -82,10 +82,14 @@ class EquipmentAgent:
 
         # CloudWatch Logs client — publishes structured JSON so metric filters fire
         self._logs = boto3.client("logs", region_name=region)
-        self._log_group = "/aws/aws-ai-watchman/dev/agent"
+        # Bug fix: was hardcoded to "dev"; now reads ENVIRONMENT env var (Bug 3)
+        env = os.environ.get("ENVIRONMENT", "dev")
+        self._log_group = os.environ.get(
+            "AGENT_LOG_GROUP",
+            f"/aws/aws-ai-watchman/{env}/agent"
+        )
         self._log_stream = f"agent/{datetime.now(timezone.utc).strftime('%Y/%m/%d')}/local"
-        self._cw_sequence_token: Optional[str] = None
-        self._ensure_log_stream()
+        self._ensure_log_stream()  # creates stream if not yet present
 
         # Structured JSON logger — stdout for local visibility
         self._logger = logging.getLogger("equipment-agent")
@@ -318,20 +322,21 @@ class EquipmentAgent:
             pass  # CloudWatch unavailable — fall back to stdout only
 
     def _push_to_cloudwatch(self, entry: dict) -> None:
-        """Push one structured JSON log event to CloudWatch Logs."""
+        """Push one structured JSON log event to CloudWatch Logs.
+
+        Bug fix: sequenceToken was removed — AWS deprecated it in Jan 2023.
+        Modern CloudWatch Logs accepts concurrent writes without it; passing
+        a stale token causes InvalidSequenceTokenException (Bug 2).
+        """
         try:
-            kwargs: dict = {
-                "logGroupName": self._log_group,
-                "logStreamName": self._log_stream,
-                "logEvents": [{
+            self._logs.put_log_events(
+                logGroupName=self._log_group,
+                logStreamName=self._log_stream,
+                logEvents=[{
                     "timestamp": int(time.time() * 1000),
                     "message": json.dumps(entry),
                 }],
-            }
-            if self._cw_sequence_token:
-                kwargs["sequenceToken"] = self._cw_sequence_token
-            response = self._logs.put_log_events(**kwargs)
-            self._cw_sequence_token = response.get("nextSequenceToken")
+            )
         except Exception:
             pass  # Never let CloudWatch errors break the agent
 

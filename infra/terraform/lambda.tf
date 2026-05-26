@@ -28,8 +28,9 @@ resource "aws_lambda_function" "bronze_router" {
 
   environment {
     variables = {
-      PROJECT     = var.project_name
-      ENVIRONMENT = var.environment
+      PROJECT                  = var.project_name
+      ENVIRONMENT              = var.environment
+      ETL_BRONZE_TO_SILVER_ARN = aws_lambda_function.etl_bronze_to_silver.arn
     }
   }
 
