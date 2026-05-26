@@ -80,7 +80,14 @@ class EquipmentAgent:
 
         self.bedrock = boto3.client("bedrock-runtime", region_name=region)
 
-        # Structured JSON logger — stdout for CloudWatch Logs ingestion
+        # CloudWatch Logs client — publishes structured JSON so metric filters fire
+        self._logs = boto3.client("logs", region_name=region)
+        self._log_group = "/aws/aws-ai-watchman/dev/agent"
+        self._log_stream = f"agent/{datetime.now(timezone.utc).strftime('%Y/%m/%d')}/local"
+        self._cw_sequence_token: Optional[str] = None
+        self._ensure_log_stream()
+
+        # Structured JSON logger — stdout for local visibility
         self._logger = logging.getLogger("equipment-agent")
         if not self._logger.handlers:
             self._logger.setLevel(logging.INFO)
@@ -284,7 +291,7 @@ class EquipmentAgent:
                     anonymized.append(label)
                     pii_detected.append({"type": label, "action": "ANONYMIZE"})
 
-        return {
+        result = {
             "message": message,
             "blocked": blocked,
             "block_reason": block_reason,
@@ -294,28 +301,64 @@ class EquipmentAgent:
             "latency_ms": latency_ms,
             "guardrail_action": action,
         }
+        # Emit to CloudWatch so metric filters fire and dashboard populates
+        self._emit_log(result)
+        return result
+
+    def _ensure_log_stream(self) -> None:
+        """Create the CloudWatch log stream if it doesn't exist yet."""
+        try:
+            self._logs.create_log_stream(
+                logGroupName=self._log_group,
+                logStreamName=self._log_stream,
+            )
+        except self._logs.exceptions.ResourceAlreadyExistsException:
+            pass  # Stream already exists — that's fine
+        except Exception:
+            pass  # CloudWatch unavailable — fall back to stdout only
+
+    def _push_to_cloudwatch(self, entry: dict) -> None:
+        """Push one structured JSON log event to CloudWatch Logs."""
+        try:
+            kwargs: dict = {
+                "logGroupName": self._log_group,
+                "logStreamName": self._log_stream,
+                "logEvents": [{
+                    "timestamp": int(time.time() * 1000),
+                    "message": json.dumps(entry),
+                }],
+            }
+            if self._cw_sequence_token:
+                kwargs["sequenceToken"] = self._cw_sequence_token
+            response = self._logs.put_log_events(**kwargs)
+            self._cw_sequence_token = response.get("nextSequenceToken")
+        except Exception:
+            pass  # Never let CloudWatch errors break the agent
 
     def _emit_log(self, result: dict, error: Optional[str] = None) -> None:
         """
         Emit a structured JSON log line that CloudWatch Logs Metric Filters
         can parse for the GuardrailBlocked and AgentLatency custom metrics.
+        Also pushes directly to CloudWatch Logs so the dashboard populates
+        when running the agent locally (not just inside Lambda).
         """
         entry = {
             "level": "ERROR" if error else ("WARNING" if result["blocked"] else "INFO"),
             "service": "equipment-agent",
-            "session_id": result["session_id"],
-            "timestamp": result["timestamp"],
+            "session_id": result.get("session_id", str(uuid.uuid4())),
+            "timestamp": result.get("timestamp", datetime.now(timezone.utc).isoformat()),
             "model_id": MODEL_ID,
             "guardrail_id": self.guardrail_id or "none",
             "blocked": result["blocked"],
             "block_reason": result["block_reason"],
             "latency_ms": result["latency_ms"],
-            "input_tokens": result["input_tokens"],
-            "output_tokens": result["output_tokens"],
+            "input_tokens": result.get("input_tokens", 0),
+            "output_tokens": result.get("output_tokens", 0),
         }
         if error:
             entry["error"] = error
         self._logger.info(json.dumps(entry))
+        self._push_to_cloudwatch(entry)
 
 
 # ---------------------------------------------------------------------------
@@ -484,33 +527,77 @@ Examples:
     if args.test_guardrail:
         # apply_guardrail mode — tests the guardrail directly, no model invocation needed.
         # Use this when model access hasn't been enabled in the Bedrock console yet.
-        print(f"Running {len(DEMO_SCENARIOS)} guardrail-only scenarios (apply_guardrail API)...\n")
-        print_divider("=")
-        blocked_count = 0
-        for scenario in DEMO_SCENARIOS:
-            result = agent.test_guardrail(scenario["message"])
-            status = "[BLOCKED]" if result["blocked"] else "[ALLOWED]"
-            icon = "[X]" if result["blocked"] else "[OK]"
-            if result["blocked"]:
-                blocked_count += 1
-            print(f"Scenario : {scenario['name']}")
-            print(f"Expected : {scenario['expect']}")
-            print(f"Outcome  : {icon} {status}", end="")
+
+        if args.message:
+            # Single custom message test
+            result = agent.test_guardrail(args.message)
+            icon = "[X] BLOCKED" if result["blocked"] else "[OK] ALLOWED"
+            print(f"Outcome  : {icon}", end="")
             if result["block_reason"]:
                 print(f"  [{result['block_reason']}]", end="")
-            print()
+            print(f"  ({result['latency_ms']} ms)")
             if result.get("pii_anonymized"):
-                print(f"PII mask : {result['pii_anonymized']} (replaced with [TYPE] placeholders)")
-            if result.get("pii_detected") and not result["blocked"]:
-                actions = set(p['action'] for p in result['pii_detected'])
-                types = [p['type'] for p in result['pii_detected']]
-                print(f"PII found: {types} -> {list(actions)}")
-            print(f"Latency  : {result['latency_ms']} ms")
-            print_divider()
+                print(f"PII mask : {result['pii_anonymized']}")
+            if not result["blocked"]:
+                print("\nGuardrail says: PASS — this message would reach the model.")
+            else:
+                print(f"\nGuardrail says: BLOCKED — the model would never see this input.")
+        elif args.interactive:
+            # Interactive guardrail REPL — type any message and see if it's blocked
+            print("Guardrail Test Mode — type any message to test it against the policy.\n")
+            print("This is the EXACT filter the agent uses on every user input.")
+            print("Type 'exit' or Ctrl+C to quit.\n")
+            while True:
+                try:
+                    msg = input("Test> ").strip()
+                except (KeyboardInterrupt, EOFError):
+                    print("\nSession ended.")
+                    break
+                if not msg:
+                    continue
+                if msg.lower() in ("exit", "quit", "q"):
+                    break
+                result = agent.test_guardrail(msg)
+                icon = "[X] BLOCKED" if result["blocked"] else "[OK] ALLOWED"
+                print(f"{icon}", end="")
+                if result["block_reason"]:
+                    print(f"  [{result['block_reason']}]", end="")
+                print(f"  ({result['latency_ms']} ms)")
+                if result.get("pii_anonymized"):
+                    print(f"  PII masked: {result['pii_anonymized']}")
+                print()
+        else:
+            # Full demo — run all 6 scenarios
+            print(f"Running {len(DEMO_SCENARIOS)} guardrail-only scenarios (apply_guardrail API)...\n")
+            print_divider("=")
+            blocked_count = 0
+            for scenario in DEMO_SCENARIOS:
+                result = agent.test_guardrail(scenario["message"])
+                status = "[BLOCKED]" if result["blocked"] else "[ALLOWED]"
+                icon = "[X]" if result["blocked"] else "[OK]"
+                if result["blocked"]:
+                    blocked_count += 1
+                print(f"Scenario : {scenario['name']}")
+                print(f"Expected : {scenario['expect']}")
+                print(f"Outcome  : {icon} {status}", end="")
+                if result["block_reason"]:
+                    print(f"  [{result['block_reason']}]", end="")
+                print()
+                if result.get("pii_anonymized"):
+                    print(f"PII mask : {result['pii_anonymized']} (replaced with [TYPE] placeholders)")
+                if result.get("pii_detected") and not result["blocked"]:
+                    actions = set(p['action'] for p in result['pii_detected'])
+                    types = [p['type'] for p in result['pii_detected']]
+                    print(f"PII found: {types} -> {list(actions)}")
+                print(f"Latency  : {result['latency_ms']} ms")
+                print_divider()
+                print()
+            print(f"Summary: {blocked_count}/{len(DEMO_SCENARIOS)} scenarios blocked by guardrail.")
+            print("Note: Scenario 2 blocked for prompt_attack — guardrail treats the message as")
+            print("      suspicious due to structured PII + embedded request pattern (more strict).")
             print()
-        print(f"Summary: {blocked_count}/{len(DEMO_SCENARIOS)} scenarios blocked by guardrail.")
-        print("Note: Scenario 2 shows ALLOWED+ANONYMIZE — PII masked inline, request not rejected.")
-        print("      Run --demo for full model invocation with masked output (requires Bedrock model access).")
+            print("Tip:  Add --interactive to test any custom message against the guardrail.")
+            print("      Add --demo (without --test-guardrail) for full model responses (needs Bedrock access).")
 
     elif args.demo:
         print(f"Running {len(DEMO_SCENARIOS)} governance demonstration scenarios...\n")
