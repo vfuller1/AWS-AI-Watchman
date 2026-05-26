@@ -48,28 +48,23 @@ resource "aws_lambda_permission" "allow_bronze_s3" {
   source_arn    = aws_s3_bucket.bronze.arn
 }
 
-# Wire S3 → Lambda: Bronze bucket triggers both router and ETL
-# - Router: fires on every object, routes root-level files into typed sub-folders
-# - ETL:    fires only on manuals/*.pdf, starts the Bronze->Silver extraction
+# Wire S3 → Lambda: Bronze bucket triggers the router on every new object.
+# The router moves files into typed sub-folders (manuals/, telemetry/, etc.).
+#
+# Note: S3 does not allow a no-filter rule (router) and a prefix-filtered rule
+# (ETL) on the same bucket/event-type because they overlap.  The ETL pipeline
+# is therefore triggered differently:
+#   - etl_bronze_to_silver is invoked directly by the router Lambda after it
+#     moves a PDF into manuals/ (see lambda/router.py).
+#   - etl_silver_to_gold   is triggered by the Silver bucket notification
+#     defined in etl_pipeline.tf (no overlap issue there).
 resource "aws_s3_bucket_notification" "bronze" {
   bucket = aws_s3_bucket.bronze.id
 
-  # Existing router — handles all new objects (skips already-prefixed keys internally)
   lambda_function {
     lambda_function_arn = aws_lambda_function.bronze_router.arn
     events              = ["s3:ObjectCreated:*"]
   }
 
-  # ETL trigger — only fires for PDFs that the router moved to manuals/
-  lambda_function {
-    lambda_function_arn = aws_lambda_function.etl_bronze_to_silver.arn
-    events              = ["s3:ObjectCreated:*"]
-    filter_prefix       = "manuals/"
-    filter_suffix       = ".pdf"
-  }
-
-  depends_on = [
-    aws_lambda_permission.allow_bronze_s3,
-    aws_lambda_permission.allow_bronze_s3_etl,
-  ]
+  depends_on = [aws_lambda_permission.allow_bronze_s3]
 }
