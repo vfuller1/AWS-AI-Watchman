@@ -48,15 +48,28 @@ resource "aws_lambda_permission" "allow_bronze_s3" {
   source_arn    = aws_s3_bucket.bronze.arn
 }
 
-# Wire S3 → Lambda: any new object in the Bronze bucket triggers the router
+# Wire S3 → Lambda: Bronze bucket triggers both router and ETL
+# - Router: fires on every object, routes root-level files into typed sub-folders
+# - ETL:    fires only on manuals/*.pdf, starts the Bronze->Silver extraction
 resource "aws_s3_bucket_notification" "bronze" {
   bucket = aws_s3_bucket.bronze.id
 
+  # Existing router — handles all new objects (skips already-prefixed keys internally)
   lambda_function {
     lambda_function_arn = aws_lambda_function.bronze_router.arn
     events              = ["s3:ObjectCreated:*"]
   }
 
-  # Permission must exist before the notification or S3 will reject it
-  depends_on = [aws_lambda_permission.allow_bronze_s3]
+  # ETL trigger — only fires for PDFs that the router moved to manuals/
+  lambda_function {
+    lambda_function_arn = aws_lambda_function.etl_bronze_to_silver.arn
+    events              = ["s3:ObjectCreated:*"]
+    filter_prefix       = "manuals/"
+    filter_suffix       = ".pdf"
+  }
+
+  depends_on = [
+    aws_lambda_permission.allow_bronze_s3,
+    aws_lambda_permission.allow_bronze_s3_etl,
+  ]
 }

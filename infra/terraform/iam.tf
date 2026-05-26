@@ -43,6 +43,22 @@ resource "aws_iam_role_policy" "lambda_router" {
 }
 
 # =============================================================================
+# ETL Pipeline Role — shared by etl_bronze_to_silver and etl_silver_to_gold
+# =============================================================================
+
+resource "aws_iam_role" "etl_pipeline" {
+  name               = "${var.project_name}-${var.environment}-etl-pipeline"
+  assume_role_policy = data.aws_iam_policy_document.lambda_assume_role.json
+  tags               = local.common_tags
+}
+
+resource "aws_iam_role_policy" "etl_pipeline" {
+  name   = "${var.project_name}-${var.environment}-etl-pipeline"
+  role   = aws_iam_role.etl_pipeline.id
+  policy = data.aws_iam_policy_document.etl_pipeline_permissions.json
+}
+
+# =============================================================================
 # Bedrock Knowledge Base Role (only created when enable_bedrock_kb=true)
 # =============================================================================
 

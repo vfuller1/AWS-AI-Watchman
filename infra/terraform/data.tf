@@ -392,6 +392,91 @@ data "aws_iam_policy_document" "lambda_router_permissions" {
 }
 
 # =============================================================================
+# ETL Pipeline Lambda IAM
+# =============================================================================
+
+data "aws_iam_policy_document" "etl_pipeline_permissions" {
+  # Read PDFs from Bronze manuals/ prefix
+  statement {
+    sid    = "BronzeManualRead"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.bronze.arn,
+      "${aws_s3_bucket.bronze.arn}/manuals/*",
+    ]
+  }
+
+  # Write extracted JSON to Silver and read it back for chunking
+  statement {
+    sid    = "SilverManualReadWrite"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.silver.arn,
+      "${aws_s3_bucket.silver.arn}/manuals/*",
+    ]
+  }
+
+  # Write chunked text files to Gold
+  statement {
+    sid    = "GoldManualWrite"
+    effect = "Allow"
+    actions = [
+      "s3:PutObject",
+      "s3:ListBucket",
+    ]
+    resources = [
+      aws_s3_bucket.gold.arn,
+      "${aws_s3_bucket.gold.arn}/manuals/*",
+    ]
+  }
+
+  # Decrypt/encrypt all three KMS-encrypted buckets
+  statement {
+    sid    = "KmsAccess"
+    effect = "Allow"
+    actions = [
+      "kms:Decrypt",
+      "kms:GenerateDataKey",
+      "kms:DescribeKey",
+    ]
+    resources = [aws_kms_key.watchman.arn]
+  }
+
+  # Trigger KB ingestion job (etl_silver_to_gold calls this when KB is enabled)
+  statement {
+    sid    = "BedrockKbIngestion"
+    effect = "Allow"
+    actions = [
+      "bedrock:StartIngestionJob",
+      "bedrock:GetIngestionJob",
+    ]
+    resources = ["*"]
+  }
+
+  # CloudWatch Logs
+  statement {
+    sid    = "CloudWatchLogs"
+    effect = "Allow"
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents",
+    ]
+    resources = [
+      "arn:aws:logs:${var.aws_region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/lambda/${var.project_name}-${var.environment}-etl-*:*",
+    ]
+  }
+}
+
+# =============================================================================
 # Bedrock Knowledge Base IAM
 # =============================================================================
 

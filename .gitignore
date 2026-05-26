@@ -9,8 +9,11 @@ override.tf.json
 *_override.tf
 *_override.tf.json
 
-# Lambda build artifacts
+# Lambda build artifacts — ignore generated function zips, keep pre-built layers
 infra/terraform/lambda/*.zip
+!infra/terraform/lambda/pypdf_layer.zip
+# Also ignore the layer build directory (pip install output)
+infra/terraform/lambda/pypdf_layer/
 
 # Generated data files — never commit PDFs or CSVs to source control
 scripts/ingest/data/

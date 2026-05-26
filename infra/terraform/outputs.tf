@@ -98,6 +98,16 @@ output "orchestration_log_group_name" {
   value       = aws_cloudwatch_log_group.orchestration.name
 }
 
+output "etl_bronze_to_silver_lambda" {
+  description = "Lambda that auto-extracts Bronze PDFs into Silver JSON."
+  value       = aws_lambda_function.etl_bronze_to_silver.function_name
+}
+
+output "etl_silver_to_gold_lambda" {
+  description = "Lambda that auto-chunks Silver JSON into Gold text files and triggers KB ingestion."
+  value       = aws_lambda_function.etl_silver_to_gold.function_name
+}
+
 output "cloudwatch_dashboard_name" {
   description = "CloudWatch Dashboard name — open in AWS Console for ops view."
   value       = aws_cloudwatch_dashboard.watchman.dashboard_name
